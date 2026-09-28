@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>교사 대시보드 — 음악 수행평가</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=Bebas+Neue&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f4f3ff; --surface: #ffffff; --surface2: #f8f7ff;
+    --accent: #5a4dff; --accent2: #d63a8f; --gold: #d48c00;
+    --text: #1a1830; --text2: #6b6894; --border: rgba(90,77,255,0.12);
+    --shadow: 0 2px 12px rgba(90,77,255,0.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Noto Sans KR', sans-serif; min-height: 100vh; }
+  .layout { display: flex; min-height: 100vh; }
+  .sidebar {
+    width: 230px; background: var(--text); padding: 2rem 1.2rem;
+    display: flex; flex-direction: column; gap: 0.3rem;
+    position: fixed; top: 0; left: 0; height: 100vh; overflow-y: auto;
+  }
+  .sidebar-logo {
+    font-family: 'Bebas Neue', sans-serif; font-size: 1.4rem;
+    letter-spacing: 0.06em; color: #fff; margin-bottom: 0.5rem;
+    padding-bottom: 1rem; border-bottom: 1px solid rgba(255,255,255,0.1);
+  }
+  .sidebar-logo span { color: var(--accent); }
+  .sidebar-section-title {
+    font-size: 0.65rem; letter-spacing: 0.15em; color: rgba(255,255,255,0.3);
+    text-transform: uppercase; padding: 0.6rem 0.5rem 0.2rem; margin-top: 0.5rem;
+  }
+  .nav-item {
+    display: block; padding: 0.55rem 0.8rem; border-radius: 8px;
+    font-size: 0.85rem; color: rgba(255,255,255,0.6); cursor: pointer;
+    transition: background 0.15s, color 0.15s; text-decoration: none;
+    border: none; background: none; width: 100%; text-align: left;
+  }
+  .nav-item:hover { background: rgba(255,255,255,0.07); color: #fff; }
+  .nav-item.active { background: rgba(90,77,255,0.3); color: #fff; font-weight: 500; }
+  .nav-item .icon { margin-right: 0.5rem; font-size: 0.9rem; }
+  .main { margin-left: 230px; padding: 2rem; flex: 1; }
+  .main-header { margin-bottom: 2rem; }
+  .main-header h1 { font-size: 1.6rem; font-weight: 700; margin-bottom: 0.3rem; }
+  .main-header p { font-size: 0.85rem; color: var(--text2); }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; padding: 1.5rem; box-shadow: var(--shadow); margin-bottom: 1.5rem;
+  }
+  .card-title { font-size: 0.9rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+  .song-input-row { display: flex; gap: 0.6rem; margin-bottom: 1rem; }
+  input[type="text"], input[type="number"], input[type="password"] {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 0.65rem 0.9rem; font-size: 0.9rem; font-family: 'Noto Sans KR', sans-serif;
+    color: var(--text); outline: none; transition: border-color 0.2s;
+  }
+  input[type="text"] { flex: 1; }
+  input[type="text"]:focus, input[type="number"]:focus, input[type="password"]:focus { border-color: var(--accent); }
+  input[type="text"]::placeholder, input[type="password"]::placeholder { color: var(--text2); opacity: 0.5; }
+  .btn {
+    padding: 0.65rem 1.1rem; border-radius: 8px; border: none;
+    font-size: 0.85rem; font-weight: 600; font-family: 'Noto Sans KR', sans-serif;
+    cursor: pointer; transition: opacity 0.2s, transform 0.1s;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { opacity: 0.85; }
+  .song-list { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .song-tag {
+    display: flex; align-items: center; gap: 0.4rem;
+    background: rgba(90,77,255,0.08); border: 1px solid rgba(90,77,255,0.18);
+    border-radius: 30px; padding: 0.3rem 0.5rem 0.3rem 0.9rem;
+    font-size: 0.82rem; color: var(--accent); font-weight: 500;
+  }
+  .song-tag button {
+    background: rgba(90,77,255,0.15); border: none; border-radius: 50%;
+    width: 18px; height: 18px; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: var(--accent); font-size: 10px; line-height: 1;
+  }
+  .song-tag button:hover { background: rgba(90,77,255,0.3); }
+  .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.2rem; box-shadow: var(--shadow); }
+  .stat-label { font-size: 0.72rem; color: var(--text2); margin-bottom: 0.3rem; letter-spacing: 0.05em; }
+  .stat-value { font-size: 1.6rem; font-weight: 700; color: var(--accent); }
+  .class-tabs { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
+  .class-tab {
+    padding: 0.4rem 1rem; border-radius: 20px; border: 1px solid var(--border);
+    background: var(--surface); font-size: 0.8rem; font-weight: 500;
+    color: var(--text2); cursor: pointer; transition: all 0.15s;
+  }
+  .class-tab:hover { border-color: var(--accent); color: var(--accent); }
+  .class-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  th {
+    text-align: left; padding: 0.6rem 0.8rem;
+    background: var(--surface2); color: var(--text2);
+    font-size: 0.72rem; font-weight: 600; letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--border); white-space: nowrap;
+  }
+  td { padding: 0.7rem 0.8rem; border-bottom: 1px solid rgba(90,77,255,0.06); color: var(--text); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(90,77,255,0.02); }
+  .badge { display: inline-block; padding: 0.15rem 0.6rem; border-radius: 20px; font-size: 0.72rem; font-weight: 600; }
+  .badge-song { background: rgba(90,77,255,0.1); color: var(--accent); }
+  .score-input {
+    width: 52px; text-align: center; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 0.3rem 0.4rem; font-size: 0.82rem; color: var(--text);
+  }
+  .score-input:focus { border-color: var(--accent); outline: none; }
+  .score-total { font-weight: 700; color: var(--accent); font-size: 0.9rem; min-width: 36px; display: inline-block; }
+  .empty-state { text-align: center; padding: 3rem 1rem; color: var(--text2); font-size: 0.9rem; }
+  .empty-state .icon { font-size: 2rem; margin-bottom: 0.5rem; }
+
+  #pw-overlay {
+    position: fixed; inset: 0; background: #1a1830;
+    display: flex; align-items: center; justify-content: center; z-index: 999;
+  }
+  .pw-box { background: var(--surface); border-radius: 20px; padding: 2.5rem; width: 340px; text-align: center; }
+  .pw-box h2 { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.3rem; }
+  .pw-box p { font-size: 0.8rem; color: var(--text2); margin-bottom: 1.5rem; }
+  .pw-box input { width: 100%; text-align: center; letter-spacing: 0.2em; font-size: 1.1rem; margin-bottom: 1rem; }
+
+  .save-notice {
+    display: none; position: fixed; bottom: 1.5rem; right: 1.5rem;
+    background: #166534; color: #fff; border-radius: 10px;
+    padding: 0.7rem 1.2rem; font-size: 0.82rem; z-index: 100;
+  }
+  .live-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 0.72rem; color: #06d6a0;
+    background: rgba(6,214,160,0.1); border: 1px solid rgba(6,214,160,0.25);
+    border-radius: 20px; padding: 0.2rem 0.6rem; margin-left: 0.5rem;
+  }
+  .live-dot { width: 6px; height: 6px; border-radius: 50%; background: #06d6a0; animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100%{opacity:0.4} 50%{opacity:1} }
+
+  /* ── 누가기록 모달 ── */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(10,8,40,0.55); backdrop-filter: blur(3px);
+    z-index: 500; align-items: center; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-box {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 20px; padding: 1.8rem; width: 540px; max-width: 95vw;
+    box-shadow: 0 8px 40px rgba(90,77,255,0.15); max-height: 90vh; overflow-y: auto;
+  }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.2rem; }
+  .modal-title { font-size: 1rem; font-weight: 700; }
+  .modal-close { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text2); }
+  .record-list { display: flex; flex-direction: column; gap: 0.7rem; margin-bottom: 1rem; }
+  .record-item {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 0.8rem 1rem;
+    font-size: 0.85rem; line-height: 1.6; position: relative;
+  }
+  .record-item .record-date { font-size: 0.7rem; color: var(--text2); margin-bottom: 0.3rem; }
+  .record-item .record-del {
+    position: absolute; top: 0.6rem; right: 0.7rem;
+    background: none; border: none; color: var(--text2);
+    cursor: pointer; font-size: 0.8rem;
+  }
+  .record-item .record-del:hover { color: #b91c1c; }
+  .record-input-wrap { display: flex; flex-direction: column; gap: 0.5rem; }
+  textarea {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 0.7rem 0.9rem; font-size: 0.88rem;
+    font-family: 'Noto Sans KR', sans-serif; color: var(--text);
+    outline: none; resize: vertical; min-height: 80px; transition: border-color 0.2s;
+  }
+  textarea:focus { border-color: var(--accent); }
+  textarea::placeholder { color: var(--text2); opacity: 0.5; }
+  .record-btn-row { display: flex; justify-content: flex-end; gap: 0.5rem; }
+  .btn-record { background: var(--accent); color: #fff; }
+  .no-record { font-size: 0.82rem; color: var(--text2); text-align: center; padding: 1rem 0; }
+</style>
+</head>
+<body>
+
+<div id="pw-overlay">
+  <div class="pw-box">
+    <h2>🔒 교사 대시보드</h2>
+    <p>비밀번호를 입력하세요</p>
+    <input type="password" id="pw-input" placeholder="비밀번호" onkeydown="if(event.key==='Enter')checkPw()">
+    <button class="btn btn-primary" style="width:100%" onclick="checkPw()">입장</button>
+    <p id="pw-error" style="color:#b91c1c;font-size:0.78rem;margin-top:0.5rem;display:none">비밀번호가 틀렸습니다.</p>
+  </div>
+</div>
+
+<div class="layout">
+  <nav class="sidebar">
+    <div class="sidebar-logo">음악<span>평가</span><br>교사 대시보드</div>
+    <div class="sidebar-section-title">메뉴</div>
+    <button class="nav-item active" onclick="switchTab('tab-songs',this)"><span class="icon">🎵</span> 곡 목록 관리</button>
+    <button class="nav-item" onclick="switchTab('tab-students',this)"><span class="icon">📋</span> 학생 명단 · 채점</button>
+    <button class="nav-item" onclick="switchTab('tab-records',this)"><span class="icon">📝</span> 누가기록</button>
+    <div class="sidebar-section-title" style="margin-top:auto">연결 상태</div>
+    <div id="conn-status" style="font-size:0.72rem;color:rgba(255,255,255,0.3);padding:0.4rem 0.5rem">연결 중...</div>
+  </nav>
+
+  <main class="main">
+    <div id="tab-songs" class="tab-content active">
+      <div class="main-header">
+        <h1>🎵 곡 목록 관리 <span class="live-badge"><span class="live-dot"></span>실시간 연동</span></h1>
+        <p>학생 돌림판에 들어갈 곡을 등록·삭제하세요. 저장 즉시 모든 학생 화면에 반영됩니다.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">➕ 곡 추가</div>
+        <div class="song-input-row">
+          <input type="text" id="song-input" placeholder="곡명 입력 (예: 학교종)" onkeydown="if(event.key==='Enter')addSong()">
+          <button class="btn btn-primary" onclick="addSong()">추가</button>
+        </div>
+        <div id="song-list" class="song-list"></div>
+        <p id="song-empty" style="font-size:0.82rem;color:var(--text2);display:none">등록된 곡이 없습니다.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">📊 현황</div>
+        <div class="stats-row">
+          <div class="stat-card"><div class="stat-label">등록 곡 수</div><div class="stat-value" id="stat-songs">0</div></div>
+          <div class="stat-card"><div class="stat-label">응시 학생</div><div class="stat-value" id="stat-students">0</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="tab-students" class="tab-content">
+      <div class="main-header">
+        <h1>📋 학생 명단 · 채점표 <span class="live-badge"><span class="live-dot"></span>실시간 연동</span></h1>
+        <p>학반을 선택하여 학생 명단과 채점표를 확인하세요.</p>
+      </div>
+      <div id="class-tabs-wrap" class="class-tabs"></div>
+      <div class="card" style="padding:1rem 1.5rem;margin-bottom:1rem">
+        <div class="card-title" style="margin-bottom:0.6rem">📝 평가 기준 (각 25점)</div>
+        <div style="display:flex;gap:1rem;flex-wrap:wrap;font-size:0.8rem;color:var(--text2)">
+          <span><strong style="color:var(--accent)">①</strong> 가사</span>
+          <span><strong style="color:var(--accent)">②</strong> 음정</span>
+          <span><strong style="color:var(--accent)">③</strong> 리듬 및 박자</span>
+          <span><strong style="color:var(--accent)">④</strong> 연주자세 및 발성(표현)</span>
+        </div>
+      </div>
+      <div class="card" style="padding:1rem">
+        <div class="table-wrap">
+          <div id="student-list-wrap">
+            <div class="empty-state"><div class="icon">👤</div>학생 데이터가 없습니다.</div>
+          </div>
+        </div>
+        <div style="margin-top:1rem;text-align:right">
+          <button class="btn btn-primary" onclick="saveScores()">💾 채점 저장</button>
+        </div>
+      </div>
+    </div>
+    <!-- TAB: 누가기록 -->
+    <div id="tab-records" class="tab-content">
+      <div class="main-header">
+        <h1>📝 누가기록 <span class="live-badge"><span class="live-dot"></span>실시간 연동</span></h1>
+        <p>학반을 선택하고 학생 이름을 클릭해 누가기록을 확인·입력하세요.</p>
+      </div>
+      <div id="records-class-tabs-wrap" class="class-tabs"></div>
+      <div class="card" style="padding:1rem">
+        <div id="records-list-wrap">
+          <div class="empty-state"><div class="icon">📝</div>학생 데이터가 없습니다.</div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- 누가기록 모달 -->
+<div class="modal-overlay" id="record-modal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-student-name">학생 누가기록</div>
+      <button class="modal-close" onclick="closeRecordModal()">✕</button>
+    </div>
+    <div id="record-list" class="record-list"></div>
+    <div class="record-input-wrap">
+      <textarea id="record-textarea" placeholder="관찰 내용, 특이사항 등을 입력하세요..."></textarea>
+      <div class="record-btn-row">
+        <button class="btn btn-record btn-primary" onclick="addRecord()">+ 기록 추가</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="save-notice" id="save-notice">✅ 저장되었습니다</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set, remove, onValue, get } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAFsOg3VEMEkU4RohjMAzws2MjwiXyaRYI",
+  authDomain: "music-evalutation.firebaseapp.com",
+  databaseURL: "https://music-evalutation-default-rtdb.firebaseio.com",
+  projectId: "music-evalutation",
+  storageBucket: "music-evalutation.firebasestorage.app",
+  messagingSenderId: "326493256601",
+  appId: "1:326493256601:web:338cc3efa60ce01c64f108"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const TEACHER_PW = '0318';
+
+let songs = [];
+let results = {};
+let scores = {};
+let records = {};
+let currentClass = 'all';
+let currentRecordsClass = 'all';
+let modalStudentId = null;
+
+window.checkPw = function() {
+  if (document.getElementById('pw-input').value === TEACHER_PW) {
+    document.getElementById('pw-overlay').style.display = 'none';
+    initFirebase();
+  } else {
+    document.getElementById('pw-error').style.display = 'block';
+  }
+};
+
+function initFirebase() {
+  document.getElementById('conn-status').textContent = '🟢 Firebase 연결됨';
+  document.getElementById('conn-status').style.color = '#06d6a0';
+
+  onValue(ref(db, 'songs'), snap => {
+    songs = snap.exists() ? Object.values(snap.val()) : [];
+    renderSongs();
+    updateStats();
+  });
+
+  onValue(ref(db, 'results'), snap => {
+    results = snap.exists() ? snap.val() : {};
+    updateStats();
+    if (document.getElementById('tab-students').classList.contains('active')) renderStudents();
+  });
+
+  onValue(ref(db, 'scores'), snap => {
+    scores = snap.exists() ? snap.val() : {};
+    if (document.getElementById('tab-students').classList.contains('active')) renderStudents();
+  });
+
+  onValue(ref(db, 'records'), snap => {
+    records = snap.exists() ? snap.val() : {};
+    if (document.getElementById('tab-records').classList.contains('active')) renderRecordsTab();
+    if (modalStudentId) renderModalRecords(modalStudentId);
+  });
+}
+
+window.switchTab = function(tabId, btn) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById(tabId).classList.add('active');
+  btn.classList.add('active');
+  if (tabId === 'tab-students') renderStudents();
+  if (tabId === 'tab-records') renderRecordsTab();
+};
+
+window.addSong = async function() {
+  const input = document.getElementById('song-input');
+  const name = input.value.trim();
+  if (!name) return;
+  if (songs.includes(name)) { alert('이미 등록된 곡입니다.'); return; }
+  const newSongs = [...songs, name];
+  await set(ref(db, 'songs'), newSongs.reduce((acc, s, i) => { acc[i] = s; return acc; }, {}));
+  input.value = '';
+  showSave();
+};
+
+window.removeSong = async function(idx) {
+  if (!confirm('이 곡을 삭제하시겠습니까?')) return;
+  const newSongs = songs.filter((_, i) => i !== idx);
+  if (newSongs.length === 0) {
+    await remove(ref(db, 'songs'));
+  } else {
+    await set(ref(db, 'songs'), newSongs.reduce((acc, s, i) => { acc[i] = s; return acc; }, {}));
+  }
+  showSave();
+};
+
+function renderSongs() {
+  const wrap = document.getElementById('song-list');
+  const empty = document.getElementById('song-empty');
+  wrap.innerHTML = '';
+  if (songs.length === 0) { empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+  songs.forEach((s, i) => {
+    const tag = document.createElement('div');
+    tag.className = 'song-tag';
+    tag.innerHTML = `${s} <button onclick="removeSong(${i})">✕</button>`;
+    wrap.appendChild(tag);
+  });
+}
+
+function updateStats() {
+  document.getElementById('stat-songs').textContent = songs.length;
+  document.getElementById('stat-students').textContent = Object.keys(results).length;
+}
+
+function getClasses() {
+  const set = new Set();
+  Object.values(results).forEach(r => { if (r.grade && r.cls) set.add(r.grade + '-' + r.cls); });
+  return [...set].sort();
+}
+
+function renderStudents() {
+  const allArr = Object.values(results);
+  const classes = getClasses();
+  const tabWrap = document.getElementById('class-tabs-wrap');
+  tabWrap.innerHTML = '';
+  const allBtn = document.createElement('button');
+  allBtn.className = 'class-tab' + (currentClass === 'all' ? ' active' : '');
+  allBtn.textContent = '전체';
+  allBtn.onclick = () => { currentClass = 'all'; renderStudents(); };
+  tabWrap.appendChild(allBtn);
+  classes.forEach(c => {
+    const btn = document.createElement('button');
+    btn.className = 'class-tab' + (currentClass === c ? ' active' : '');
+    btn.textContent = c.replace('-', '학년 ') + '반';
+    btn.onclick = () => { currentClass = c; renderStudents(); };
+    tabWrap.appendChild(btn);
+  });
+
+  let filtered = allArr;
+  if (currentClass !== 'all') {
+    const [g, cl] = currentClass.split('-');
+    filtered = allArr.filter(r => r.grade === g && r.cls === cl);
+  }
+  filtered.sort((a, b) => {
+    const ka = (a.grade||'0')+(a.cls||'0')+(a.num||'0').padStart(3,'0');
+    const kb = (b.grade||'0')+(b.cls||'0')+(b.num||'0').padStart(3,'0');
+    return ka.localeCompare(kb);
+  });
+
+  const wrap = document.getElementById('student-list-wrap');
+  wrap.innerHTML = '';
+  if (filtered.length === 0) {
+    wrap.innerHTML = '<div class="empty-state"><div class="icon">👤</div>학생 데이터가 없습니다.</div>';
+    return;
+  }
+
+  const table = document.createElement('table');
+  table.innerHTML = `<thead><tr>
+    <th>번호</th><th>이름</th><th>선정 곡</th>
+    <th>① 가사<br><small style="font-weight:400;color:#aaa">/25</small></th>
+    <th>② 음정<br><small style="font-weight:400;color:#aaa">/25</small></th>
+    <th>③ 리듬·박자<br><small style="font-weight:400;color:#aaa">/25</small></th>
+    <th>④ 자세·발성<br><small style="font-weight:400;color:#aaa">/25</small></th>
+    <th>합계<br><small style="font-weight:400;color:#aaa">/100</small></th>
+    <th>시간</th>
+    <th>누가기록</th>
+  </tr></thead>`;
+  const tbody = document.createElement('tbody');
+  filtered.forEach(r => {
+    const sid = r.studentId;
+    const sc = scores[sid] || { s1:'', s2:'', s3:'', s4:'' };
+    const total = [sc.s1,sc.s2,sc.s3,sc.s4].map(v=>parseInt(v)||0).reduce((a,b)=>a+b,0);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><strong>${r.grade}-${r.cls} ${r.num}번</strong></td>
+      <td>${r.name}</td>
+      <td><span class="badge badge-song">${r.song||'—'}</span></td>
+      <td><input class="score-input" type="number" min="0" max="25" value="${sc.s1}" data-sid="${sid}" data-field="s1" oninput="recalcRow(this)"></td>
+      <td><input class="score-input" type="number" min="0" max="25" value="${sc.s2}" data-sid="${sid}" data-field="s2" oninput="recalcRow(this)"></td>
+      <td><input class="score-input" type="number" min="0" max="25" value="${sc.s3}" data-sid="${sid}" data-field="s3" oninput="recalcRow(this)"></td>
+      <td><input class="score-input" type="number" min="0" max="25" value="${sc.s4}" data-sid="${sid}" data-field="s4" oninput="recalcRow(this)"></td>
+      <td><span class="score-total" id="total-${sid}">${total||'—'}</span></td>
+      <td style="font-size:0.72rem;color:var(--text2)">${r.timestamp||''}</td>
+      <td><button class="btn" style="background:rgba(90,77,255,0.1);color:var(--accent);padding:0.3rem 0.7rem;font-size:0.75rem" onclick="openRecordModal('${sid}','${r.name}','${r.grade}-${r.cls} ${r.num}번')">📝 ${(records[sid]&&Object.keys(records[sid]).length)||0}건</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  wrap.appendChild(table);
+}
+
+window.recalcRow = function(input) {
+  const sid = input.dataset.sid;
+  let v = parseInt(input.value)||0;
+  if (v > 25) { input.value = 25; v = 25; }
+  if (v < 0) { input.value = 0; v = 0; }
+  const row = input.closest('tr');
+  const total = [...row.querySelectorAll('.score-input')].map(i=>parseInt(i.value)||0).reduce((a,b)=>a+b,0);
+  const el = document.getElementById('total-' + sid);
+  if (el) el.textContent = total;
+};
+
+window.saveScores = async function() {
+  const newScores = { ...scores };
+  document.querySelectorAll('.score-input').forEach(inp => {
+    const sid = inp.dataset.sid;
+    const field = inp.dataset.field;
+    if (!newScores[sid]) newScores[sid] = { s1:'', s2:'', s3:'', s4:'' };
+    newScores[sid][field] = inp.value;
+  });
+  await set(ref(db, 'scores'), newScores);
+  showSave();
+};
+
+// ── 누가기록 모달 ──
+window.openRecordModal = function(sid, name, label) {
+  modalStudentId = sid;
+  document.getElementById('modal-student-name').textContent = `📝 ${label} ${name}`;
+  document.getElementById('record-textarea').value = '';
+  renderModalRecords(sid);
+  document.getElementById('record-modal').classList.add('open');
+};
+
+window.closeRecordModal = function() {
+  document.getElementById('record-modal').classList.remove('open');
+  modalStudentId = null;
+};
+
+function renderModalRecords(sid) {
+  const list = document.getElementById('record-list');
+  const recs = records[sid] ? Object.entries(records[sid]).sort((a,b) => b[0].localeCompare(a[0])) : [];
+  if (recs.length === 0) {
+    list.innerHTML = '<div class="no-record">아직 기록이 없습니다.</div>';
+    return;
+  }
+  list.innerHTML = recs.map(([key, r]) => `
+    <div class="record-item">
+      <div class="record-date">${r.date}</div>
+      <div>${r.text}</div>
+      <button class="record-del" onclick="deleteRecord('${sid}','${key}')">✕</button>
+    </div>
+  `).join('');
+}
+
+window.addRecord = async function() {
+  const text = document.getElementById('record-textarea').value.trim();
+  if (!text || !modalStudentId) return;
+  const key = Date.now().toString();
+  const date = new Date().toLocaleString('ko-KR');
+  await set(ref(db, `records/${modalStudentId}/${key}`), { text, date });
+  document.getElementById('record-textarea').value = '';
+  showSave();
+};
+
+window.deleteRecord = async function(sid, key) {
+  if (!confirm('이 기록을 삭제하시겠습니까?')) return;
+  await remove(ref(db, `records/${sid}/${key}`));
+};
+
+// ── 누가기록 탭 ──
+function renderRecordsTab() {
+  const allArr = Object.values(results);
+  const classes = getClasses();
+  const tabWrap = document.getElementById('records-class-tabs-wrap');
+  tabWrap.innerHTML = '';
+  const allBtn = document.createElement('button');
+  allBtn.className = 'class-tab' + (currentRecordsClass === 'all' ? ' active' : '');
+  allBtn.textContent = '전체';
+  allBtn.onclick = () => { currentRecordsClass = 'all'; renderRecordsTab(); };
+  tabWrap.appendChild(allBtn);
+  classes.forEach(c => {
+    const btn = document.createElement('button');
+    btn.className = 'class-tab' + (currentRecordsClass === c ? ' active' : '');
+    btn.textContent = c.replace('-', '학년 ') + '반';
+    btn.onclick = () => { currentRecordsClass = c; renderRecordsTab(); };
+    tabWrap.appendChild(btn);
+  });
+
+  let filtered = allArr;
+  if (currentRecordsClass !== 'all') {
+    const [g, cl] = currentRecordsClass.split('-');
+    filtered = allArr.filter(r => r.grade === g && r.cls === cl);
+  }
+  filtered.sort((a, b) => {
+    const ka = (a.grade||'0')+(a.cls||'0')+(a.num||'0').padStart(3,'0');
+    const kb = (b.grade||'0')+(b.cls||'0')+(b.num||'0').padStart(3,'0');
+    return ka.localeCompare(kb);
+  });
+
+  const wrap = document.getElementById('records-list-wrap');
+  wrap.innerHTML = '';
+  if (filtered.length === 0) {
+    wrap.innerHTML = '<div class="empty-state"><div class="icon">📝</div>학생 데이터가 없습니다.</div>';
+    return;
+  }
+
+  filtered.forEach(r => {
+    const sid = r.studentId;
+    const recs = records[sid] ? Object.entries(records[sid]).sort((a,b) => b[0].localeCompare(a[0])) : [];
+    const count = recs.length;
+    const div = document.createElement('div');
+    div.style.cssText = 'border-bottom:1px solid rgba(90,77,255,0.07);padding:1rem 0.5rem;';
+    div.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:${count>0?'0.7rem':'0'}">
+        <div style="font-size:0.88rem;font-weight:600">${r.grade}-${r.cls} ${r.num}번 ${r.name} <span style="font-size:0.75rem;color:var(--text2);font-weight:400">${r.song||''}</span></div>
+        <button class="btn btn-primary" style="padding:0.3rem 0.8rem;font-size:0.75rem" onclick="openRecordModal('${sid}','${r.name}','${r.grade}-${r.cls} ${r.num}번')">+ 기록 추가</button>
+      </div>
+      ${count === 0 ? `<div style="font-size:0.78rem;color:var(--text2)">기록 없음</div>` :
+        recs.slice(0,3).map(([k,rec]) => `
+          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:0.6rem 0.8rem;margin-bottom:0.4rem;font-size:0.82rem;line-height:1.6;position:relative">
+            <div style="font-size:0.68rem;color:var(--text2);margin-bottom:0.2rem">${rec.date}</div>
+            ${rec.text}
+            <button style="position:absolute;top:0.5rem;right:0.6rem;background:none;border:none;color:var(--text2);cursor:pointer;font-size:0.75rem" onclick="deleteRecord('${sid}','${k}')">✕</button>
+          </div>
+        `).join('') + (count > 3 ? `<div style="font-size:0.75rem;color:var(--accent);cursor:pointer" onclick="openRecordModal('${sid}','${r.name}','${r.grade}-${r.cls} ${r.num}번')">+ ${count-3}건 더 보기</div>` : '')
+      }
+    `;
+    wrap.appendChild(div);
+  });
+}
+
+function showSave() {
+  const n = document.getElementById('save-notice');
+  n.style.display = 'block';
+  setTimeout(() => { n.style.display = 'none'; }, 2000);
+}
+</script>
+</body>
+</html>
